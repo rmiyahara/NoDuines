@@ -62,14 +62,7 @@ void maxvectors(){
 void multiShine(){
   if(gcc.ddown){
     gcc.yAxis = -255;
-    for (int i = 0; i < 20; i++) { //20 Multishines
-      gcc.b = true;
-      delay(4 * 17);
-      gcc.b = false;
-      gcc.y = true;
-      delay(4 * 17);
-      gcc.y = false;
-    }
+    gcc.b = true;
   }
  }
 void shielddrops(){

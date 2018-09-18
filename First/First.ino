@@ -6,9 +6,6 @@
 #define se_notch_x_value  .7625
 #define se_notch_y_value -.6375
 //record southwest and southeast notch values
-
-#define frame 17
- 
 //to switch to dolphin mode hold dpad right for 5 seconds
 //to return to a stock controller hold dpad left for 10 seconds
  
@@ -36,6 +33,8 @@ char ax, ay, cx, cy, buf;
 float swang, seang;
 word mode, toggle;
 unsigned long n;
+int multishine_counter = 0;
+unsigned long delta, last = 0;
  
 void convertinputs(){
   perfectangles(); //reduces deadzone of cardinals and gives steepest/shallowest angles when on or near the gate
@@ -44,7 +43,7 @@ void convertinputs(){
   backdash();      //fixes dashback by imposing a 1 frame buffer upon tilt turn values
   dolphinfix();    //ensures close to 0 values are reported as 0 on the sticks to fix dolphin calibration and allows user to switch to dolphin mode for backdash
   nocode();        //function to disable all code if dpad left is held for 10 seconds
-  multiShine();
+  multishine();
 } //more mods to come!
  
 void perfectangles(){
@@ -59,12 +58,7 @@ void maxvectors(){
   if(cym>75&&cxm<23){gcc.cyAxis = (cy>0)?255:1; gcc.cxAxis = 128;}
 }
 
-void multiShine(){
-  if(gcc.ddown){
-    gcc.yAxis = -255;
-    gcc.b = true;
-  }
- }
+
 void shielddrops(){
   shield = gcc.l||gcc.r||gcc.left>74||gcc.right>74||gcc.z;
   if(shield){
@@ -96,6 +90,22 @@ void nocode(){
     off = off||(millis()-n>2000);
   }else n = 0;
 }
+
+void multishine() {
+  if (gcc.ddown || multishine_counter) {
+    if (multishine_counter < (8)) {
+      gcc.yAxis = -255;
+      gcc.b = true;
+      Serial.println("Shine");
+    } else if (multishine_counter < (12)) {
+      gcc.y = true;
+      Serial.println("Jump");
+    } else {
+      multishine_counter = 0 - delta;
+    }
+    multishine_counter += delta;
+  }
+}
  
 float ang(float xval, float yval){return atan(yval/xval)*57.2958;} //function to return angle in degrees when given x and y components
 float mag(char  xval, char  yval){return sqrt(sq(xval)+sq(yval));} //function to return vector magnitude when given x and y components
@@ -104,6 +114,7 @@ void setup(){
   gcc.origin=0; gcc.errlatch=0; gcc.high1=0; gcc.errstat=0;  //init values
   swang = ang(abs(sw_notch_x_value), abs(sw_notch_y_value)); //calculates angle of SW gate based on user inputted data
   seang = ang(abs(se_notch_x_value), abs(se_notch_y_value)); //calculates angle of SE gate based on user inputted data
+  Serial.begin(9600);
 }
  
 void loop(){
@@ -113,6 +124,8 @@ void loop(){
   cx = gcc.cxAxis-128; cy = gcc.cyAxis-128; //offsets from nuetral position of c stick
   axm = abs(ax); aym = abs(ay);             //magnitude of analog stick offsets
   cxm = abs(cx); cym = abs(cy);             //magnitude of c stick offsets
+  delta = millis() - last;
+  last = millis();
   if(!off) convertinputs();                 //implements all the fixes (remove this line to unmod the controller)
   console.write(gcc);                       //sends controller data to the console
 }

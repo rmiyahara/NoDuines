@@ -9,20 +9,7 @@
 //to switch to dolphin mode hold dpad right for 5 seconds
 //to return to a stock controller hold dpad left for 10 seconds
  
-/*
-Install Intructions:
-1. connect arduino to computer and make sure proper board [Arduino Nano], processor [ATmega328], and COM port [highest number] are selected under Tools
-2. hit the upload button (the arrow) and wait for it to say "Done Uploading" at the bottom before disconnecting the arduino
-3. connect 5V and Gnd from GCC header to 5V and Gnd pins on arduino (do not sever either wire)
-4. sever data wire between GCC cable and header on controller
-5. connect D2 on arduino to data header on controller, and D3 to data wire from cable
-6. ensure no wires are caught anywhere and close everything up
-Note: if there is any trouble with steps 1 or 2, get the CH340 driver for your operating system from google
-*/
- 
- 
- 
- 
+
 #include "Nintendo.h"
 CGamecubeController controller(2); //sets D2 on arduino to read data from controller
 CGamecubeConsole console(3);       //sets D3 on arduino to write data to console
@@ -33,7 +20,7 @@ char ax, ay, cx, cy, buf;
 float swang, seang;
 word mode, toggle;
 unsigned long n;
-int multishine_counter = 0;
+int multishine_counter, ledgedashl_counter, ledgedashr_counter, double_laser = 0;
 unsigned long delta, last = 0;
  
 void convertinputs(){
@@ -42,9 +29,8 @@ void convertinputs(){
   shielddrops();   //allows shield drops down and gives a 6 degree range of shield dropping centered on SW and SE gates
   backdash();      //fixes dashback by imposing a 1 frame buffer upon tilt turn values
   dolphinfix();    //ensures close to 0 values are reported as 0 on the sticks to fix dolphin calibration and allows user to switch to dolphin mode for backdash
-  nocode();        //function to disable all code if dpad left is held for 10 seconds
   multishine();
-} //more mods to come!
+}
  
 void perfectangles(){
   if(axm>75){gcc.xAxis = (ax>0)?204:52; if(aym<23) gcc.yAxis = (ay>0)?151:105;}
@@ -83,13 +69,6 @@ void dolphinfix(){
   else mode = 0;
   cycles = 3 + (6*dolphin);
 }
- 
-void nocode(){
-  if(gcc.dleft){
-    if(n == 0) n = millis();
-    off = off||(millis()-n>2000);
-  }else n = 0;
-}
 
 void multishine() {
   if (gcc.ddown || multishine_counter) {
@@ -107,6 +86,27 @@ void multishine() {
   }
 }
  
+void ledgedashl() {
+  if (gcc.left || ledgedashl_counter) {
+    if (ledgedashl_counter < 8) {
+      gcc.yAxis = -255;
+      Serial.println("Drop");
+    } else if (ledgedashl_counter < 10) {
+      gcc.yAxis = 0;
+      gcc.y = true;
+      Serial.println("Jump");
+    } else if (ledgedashl_counter < 18) {
+      gcc.yAxis = -128;
+      gcc.xAxis = -128;
+      gcc.r = true;
+      Serial.println("Waveland");
+    } else {
+      ledgedashl_counter = 0 - delta;
+    }
+    ledgedashl_counter += delta;
+  }
+}
+
 float ang(float xval, float yval){return atan(yval/xval)*57.2958;} //function to return angle in degrees when given x and y components
 float mag(char  xval, char  yval){return sqrt(sq(xval)+sq(yval));} //function to return vector magnitude when given x and y components
  
